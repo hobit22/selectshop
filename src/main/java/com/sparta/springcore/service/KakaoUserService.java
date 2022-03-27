@@ -49,38 +49,6 @@ public class KakaoUserService {
 
     }
 
-    private User registerKakaoUserIfNeeded(KakaoUserInfoDto kakaoUserInfo) {
-        // DB 에 중복된 Kakao Id 가 있는지 확인
-        Long kakaoId = kakaoUserInfo.getId();
-        User kakaoUser = userRepository.findByKakaoId(kakaoId)
-                .orElse(null);
-        if (kakaoUser == null) {
-            // 회원가입
-            // username: kakao nickname
-            String nickname = kakaoUserInfo.getNickname();
-
-            // password: random UUID
-            String password = UUID.randomUUID().toString();
-            String encodedPassword = passwordEncoder.encode(password);
-
-            // email: kakao email
-            String email = kakaoUserInfo.getEmail();
-            // role: 일반 사용자
-            UserRoleEnum role = UserRoleEnum.USER;
-
-            kakaoUser = new User(nickname, encodedPassword, email, role, kakaoId);
-            userRepository.save(kakaoUser);
-        }
-        return kakaoUser;
-    }
-
-    private void forceLogin(User kakaoUser) {
-        // 4. 강제 로그인 처리
-        UserDetails userDetails = new UserDetailsImpl(kakaoUser);
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
-
     private String getAccessToken(String code) throws JsonProcessingException {
 
         // HTTP Header 생성
@@ -141,5 +109,47 @@ public class KakaoUserService {
         System.out.println("카카오 사용자 정보: " + id + ", " + nickname + ", " + email);
 
         return new KakaoUserInfoDto(id, nickname, email);
+    }
+
+    private User registerKakaoUserIfNeeded(KakaoUserInfoDto kakaoUserInfo) {
+        // DB 에 중복된 Kakao Id 가 있는지 확인
+        Long kakaoId = kakaoUserInfo.getId();
+        User kakaoUser = userRepository.findByKakaoId(kakaoId)
+                .orElse(null);
+        if (kakaoUser == null) {
+            // 카카오 사용자 이메일과 동일한 이메일을 가진 회원이 있는지 확인
+            String kakaoEmail = kakaoUserInfo.getEmail();
+            User sameEmailUser = userRepository.findByEmail(kakaoEmail).orElse(null);
+            if (sameEmailUser != null) {
+                kakaoUser = sameEmailUser;
+                // 기존 회원정보에 카카오 Id 추가
+                kakaoUser.setKakaoId(kakaoId);
+            } else {
+                // 신규 회원가입
+                // username: kakao nickname
+                String nickname = kakaoUserInfo.getNickname();
+
+                // password: random UUID
+                String password = UUID.randomUUID().toString();
+                String encodedPassword = passwordEncoder.encode(password);
+
+                // email: kakao email
+                String email = kakaoUserInfo.getEmail();
+                // role: 일반 사용자
+                UserRoleEnum role = UserRoleEnum.USER;
+
+                kakaoUser = new User(nickname, encodedPassword, email, role, kakaoId);
+            }
+
+            userRepository.save(kakaoUser);
+        }
+        return kakaoUser;
+    }
+
+    private void forceLogin(User kakaoUser) {
+        // 4. 강제 로그인 처리
+        UserDetails userDetails = new UserDetailsImpl(kakaoUser);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
