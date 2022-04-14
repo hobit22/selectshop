@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sparta.springcore.dto.SignupRequestDto;
 import com.sparta.springcore.service.KakaoUserService;
 import com.sparta.springcore.service.UserService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class UserController {
-
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final UserService userService;
     private final KakaoUserService kakaoUserService;
 
